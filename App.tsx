@@ -21,7 +21,8 @@ import {
   GripVertical,
   GripHorizontal,
   FileText,
-  Upload
+  Upload,
+  Grip
 } from 'lucide-react';
 import { Scene, APIStatus, StoryboardStyle } from './types';
 import { generateStoryboardSketch } from './services/geminiService';
@@ -573,10 +574,37 @@ const App: React.FC = () => {
                 onClick={() => setSelectedSceneId(scene.id)}
                 className={`flex-shrink-0 h-full w-[300px] rounded-xl border-2 transition-all cursor-pointer overflow-hidden group relative flex flex-col ${selectedSceneId === scene.id ? 'border-[#ff6b00] bg-[#1a1a1a] scale-105 z-20' : 'border-[#333] bg-black hover:border-[#555]'}`}
               >
-                <div className="absolute top-2 right-2 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => { e.stopPropagation(); addScene(scene.id); }} className="bg-[#ff6b00] text-black p-1.5 rounded-lg hover:scale-110 transition-transform"><Plus size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); deleteScene(scene.id, e); }} className="bg-red-600 text-white p-1.5 rounded-lg hover:scale-110 transition-transform"><Trash2 size={14} /></button>
+                {/* Drag Handle */}
+                <div className="drag-handle absolute top-2 left-2 z-30 p-1.5 bg-black/60 rounded-lg text-white/50 hover:text-white cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Grip size={14} />
                 </div>
+
+                {/* Actions Overlay */}
+                <div className="absolute top-2 right-2 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); addScene(scene.id); }} 
+                    title="Thêm phân cảnh"
+                    className="bg-blue-600 text-white p-1.5 rounded-lg hover:scale-110 transition-transform shadow-lg"
+                  >
+                    <Plus size={14} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); generateSingle(scene.id); }} 
+                    title="Vẽ lại"
+                    disabled={scene.isGenerating || apiStatus !== APIStatus.CONNECTED}
+                    className="bg-[#ff6b00] text-black p-1.5 rounded-lg hover:scale-110 transition-transform shadow-lg disabled:opacity-50"
+                  >
+                    <RefreshCw size={14} className={scene.isGenerating ? 'animate-spin' : ''} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteScene(scene.id, e); }} 
+                    title="Xóa"
+                    className="bg-red-600 text-white p-1.5 rounded-lg hover:scale-110 transition-transform shadow-lg"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+
                 <div className="h-[120px] bg-black flex items-center justify-center relative border-b border-[#222]">
                   {scene.imageUrl ? (
                     <img src={scene.imageUrl} className="w-full h-full object-cover" alt="Thumb" />
@@ -586,7 +614,14 @@ const App: React.FC = () => {
                     </div>
                   )}
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/80 rounded text-[7px] font-black text-[#ff6b00] uppercase tracking-widest">{scene.style}</div>
+                  
+                  {scene.isGenerating && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <RefreshCw size={24} className="animate-spin text-[#ff6b00]" />
+                    </div>
+                  )}
                 </div>
+                
                 <div className="flex-1 p-3 bg-gradient-to-t from-black/20 to-transparent">
                   <span className="text-[10px] font-black text-[#ff6b00] italic uppercase">SHOT {scene.shotNumber}</span>
                   <p className="text-[9px] text-gray-400 mt-1 line-clamp-2 italic leading-tight">{scene.description}</p>
@@ -660,6 +695,8 @@ const App: React.FC = () => {
               <p>3. <b>Phân tích kịch bản:</b> Hệ thống sẽ tách các đoạn dựa trên từ khóa như "Shot 1", "Phân cảnh 1". Nếu có từ khóa "Prompt:", phần đó sẽ được dùng làm câu lệnh vẽ ảnh cho AI.</p>
               <p>4. <b>Vẽ Storyboard:</b> Chọn phong cách vẽ và nhấn vẽ. AI sẽ tạo hình ảnh phác thảo mượt mà theo đúng mô tả.</p>
               <p>5. <b>Tải về:</b> Sau khi vẽ xong toàn bộ, nhấn "XUẤT PDF" để nhận file storyboard hoàn chỉnh chuyên nghiệp.</p>
+              <p>6. <b>Kéo thả:</b> Bạn có thể dùng biểu tượng kéo ở góc trái mỗi shot để thay đổi thứ tự các phân cảnh.</p>
+              <p>7. <b>Chỉnh sửa nhanh:</b> Các nút thêm, vẽ lại và xóa xuất hiện ngay khi bạn di chuột qua shot ở timeline.</p>
             </div>
             <button onClick={() => setShowGuide(false)} className="w-full py-4 bg-[#ff6b00] text-black font-black uppercase rounded-xl">Bắt đầu ngay</button>
           </div>
