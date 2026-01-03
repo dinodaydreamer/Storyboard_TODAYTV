@@ -4,18 +4,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Storyboard Sketcher Pro</title>
+    <title>AI STORYBOARD CREATOR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
         .sketch-border { border: 2px solid #333; border-radius: 4px; }
         @media print {
             .no-print { display: none; }
         }
         .sortable-ghost {
             opacity: 0.4;
-            border: 2px dashed #ff6b00 !important;
+            border: 2px dashed #ff9d4d !important;
+        }
+
+        /* Tùy chỉnh thanh cuộn màu cam rực rỡ */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #ff9d4d;
+            border-radius: 10px;
+            border: 2px solid rgba(0,0,0,0.3);
+            box-shadow: 0 0 5px rgba(255, 157, 77, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #ffb366;
+        }
+
+        /* Hiệu ứng Film Reel cho Timeline - Màu đen điện ảnh */
+        .film-reel-container {
+            background-color: #050505;
+            position: relative;
+            padding: 24px 0;
+            overflow: hidden;
+            border-top: 1px solid #1a1a1a;
+        }
+
+        /* Răng cưa phim */
+        .film-perforations {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 12px;
+            /* Lỗ răng cưa màu xám tối để nổi bật trên nền đen */
+            background-image: radial-gradient(circle, #222 40%, transparent 45%);
+            background-size: 24px 24px;
+            background-position: center;
+            z-index: 10;
+        }
+        .perforations-top { top: 6px; }
+        .perforations-bottom { bottom: 6px; }
+
+        .film-content-mask {
+            background: rgba(15, 15, 15, 0.95);
+            height: 100%;
+            border-top: 1px solid #1a1a1a;
+            border-bottom: 1px solid #1a1a1a;
+        }
+
+        /* Resizer styles - Nhỏ lại và màu cam nhạt */
+        .resizer-v {
+            height: 2px;
+            background: #ff9d4d;
+            cursor: row-resize;
+            transition: all 0.2s;
+            z-index: 40;
+            opacity: 0.6;
+        }
+        .resizer-v:hover, .resizer-v.active {
+            background: #ffb366;
+            height: 4px;
+            opacity: 1;
+        }
+
+        .resizer-h {
+            width: 2px;
+            background: #ff9d4d;
+            cursor: col-resize;
+            transition: all 0.2s;
+            z-index: 40;
+            opacity: 0.6;
+        }
+        .resizer-h:hover, .resizer-h.active {
+            background: #ffb366;
+            width: 4px;
+            opacity: 1;
+        }
+        
+        /* Ngăn chặn chọn text khi đang kéo */
+        .resizing {
+            user-select: none;
+            pointer-events: none;
         }
     </style>
 <script type="importmap">
@@ -34,7 +119,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-[#0f0f0f] text-gray-200">
     <div id="root"></div>
 <script type="module" src="/index.tsx"></script>
 </body>

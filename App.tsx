@@ -7,19 +7,21 @@ import {
   Play, 
   RefreshCw, 
   Image as ImageIcon,
-  Square,
   XCircle,
-  GripHorizontal,
   HelpCircle,
   LayoutGrid,
   Info,
-  Settings as SettingsIcon,
   CheckCircle2,
   AlertCircle,
   Palette,
-  ExternalLink,
   BookOpen,
-  Copy
+  Key as KeyIcon,
+  Eye,
+  EyeOff,
+  GripVertical,
+  GripHorizontal,
+  FileText,
+  Upload
 } from 'lucide-react';
 import { Scene, APIStatus, StoryboardStyle } from './types';
 import { generateStoryboardSketch } from './services/geminiService';
@@ -27,21 +29,74 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import Sortable from 'sortablejs';
 
+const DEMO_SCRIPT = `SHOT 1 – GÓC RỘNG (ESTABLISHING SHOT)
+
+Prompt:
+Robot bảo hộ phong cách hoạt hình 3D điện ảnh, chiều cao khoảng 2,5 mét, thân hình to chắc bo tròn, đầu bầu dục lớn, hai mắt tròn phát sáng xanh dịu, lõi năng lượng tròn phát sáng ở ngực, thân kim loại xám xanh có vết trầy xước nhẹ, đứng giữa thành phố hậu tận thế đổ nát, các tòa nhà hoạt hình bị sập, đường phố trống trải, bình minh xám xanh, ánh sáng mềm, cảnh toàn rộng điện ảnh, tỷ lệ 16:9, không khí cô độc
+
+SHOT 2 – GÓC THẤP (LOW ANGLE)
+
+Prompt:
+Robot bảo hộ phong cách hoạt hình 3D điện ảnh, chiều cao 2,5 mét, thân kim loại bo tròn xám xanh, mắt tròn phát sáng xanh dịu, lõi năng lượng ngực phát sáng, dáng đứng hơi khom, nhìn xuống thành phố đổ nát, góc máy thấp làm nổi bật kích thước và sự cô đơn, sương mù nhẹ quanh chân, ánh sáng ngược dịu, phong cách animation cinematic
+
+SHOT 3 – CẬN CẢNH (CLOSE-UP)
+
+Prompt:
+Cận cảnh khuôn mặt robot bảo hộ phong cách hoạt hình 3D điện ảnh, đầu bầu dục, hai mắt tròn lớn phát sáng xanh dịu thể hiện cảm xúc buồn bã, bề mặt kim loại mờ có vết trầy xước nhỏ, ánh sáng mềm phản chiếu thành phố đổ nát, độ sâu trường ảnh nông, cảm xúc rõ nét
+
+SHOT 4 – GÓC THEO SAU (TRACKING SHOT)
+
+Prompt:
+Robot bảo hộ phong cách hoạt hình 3D điện ảnh, thân hình to chắc bo tròn, bước chậm trên con phố bỏ hoang, lõi năng lượng ngực phát sáng nhẹ, góc máy theo sau từ phía sau, bảng hiệu hoạt hình cũ rách, giấy bay trong gió, màu sắc pastel trầm, cảm giác hoài niệm, chuyển động mượt
+
+SHOT 5 – GÓC QUA VAI (OVER-THE-SHOULDER)
+
+Prompt:
+Góc máy qua vai robot bảo hộ phong cách hoạt hình 3D điện ảnh, vai rộng và cánh tay to bo tròn ở tiền cảnh, robot nhìn thấy một đứa trẻ nhỏ đang trốn trong siêu thị đổ nát, ánh nắng xiên nhẹ, tương phản giữa robot kim loại xám xanh và đứa trẻ mong manh, không khí cảm xúc
+
+SHOT 6 – NGƯỢC SÁNG / SILHOUETTE
+
+Prompt:
+Robot bảo hộ phong cách hoạt hình 3D điện ảnh đứng che chắn phía trước đứa trẻ, thân hình bo tròn lớn, lõi năng lượng tròn trong ngực phát sáng mạnh hơn, ánh ngược tạo viền sáng quanh robot, tư thế bảo vệ, hậu cảnh thành phố tối nhẹ, cảm xúc hy sinh, phong cách animation cinematic
+
+SHOT 7 – CẢNH HÀNH ĐỘNG (DYNAMIC SHOT)
+
+Prompt:
+Robot bảo hộ phong cách hoạt hình 3D điện ảnh, thân kim loại xám xanh bo tròn, mắt xanh phát sáng, lõi năng lượng ngực rực sáng, đứng đối diện nhiều robot săn đuổi tạo hình góc cạnh, chuyển động nhanh, bụi và khói bay, motion blur nhẹ, không khí căng thẳng nhưng phù hợp phim hoạt hình
+
+SHOT 8 – GÓC RỘNG KẾT (EPILOGUE SHOT)
+
+Prompt:
+Cảnh toàn rộng hoạt hình điện ảnh lúc bình minh, robot bảo hộ phong cách hoạt hình 3D điện ảnh nằm bất động, thân kim loại xám xanh trầy xước, lõi năng lượng tắt dần, cánh tay bo tròn nằm ở tiền cảnh, đứa trẻ bước ra ánh sáng, thành phố yên lặng, không khí hy vọng và cảm động, tỷ lệ 16:9`;
+
 const App: React.FC = () => {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [scriptInput, setScriptInput] = useState('');
   const [showScriptInput, setShowScriptInput] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [apiStatus, setApiStatus] = useState<APIStatus>(APIStatus.IDLE);
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
+  // Panel Sizes
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const [timelineHeight, setTimelineHeight] = useState(280);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [isResizingTimeline, setIsResizingTimeline] = useState(false);
+  
+  // API Key Management
+  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [showKey, setShowKey] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const stopGenerationRef = useRef(false);
   const timelineRef = useRef<HTMLDivElement>(null);
   const sortableRef = useRef<Sortable | null>(null);
   const pdfItemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const apiStatus = useMemo(() => {
+    return apiKey.trim().length > 10 ? APIStatus.CONNECTED : APIStatus.IDLE;
+  }, [apiKey]);
 
   const selectedScene = useMemo(() => 
     scenes.find(s => s.id === selectedSceneId) || null
@@ -50,6 +105,45 @@ const App: React.FC = () => {
   const isReadyToExport = useMemo(() => {
     return scenes.length > 0 && scenes.every(s => !!s.imageUrl && !s.isGenerating);
   }, [scenes]);
+
+  useEffect(() => {
+    localStorage.setItem('gemini_api_key', apiKey);
+  }, [apiKey]);
+
+  // Handle Resizing Logic
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingSidebar) {
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth > 250 && newWidth < 600) {
+          setSidebarWidth(newWidth);
+        }
+      }
+      if (isResizingTimeline) {
+        const newHeight = window.innerHeight - e.clientY;
+        if (newHeight > 150 && newHeight < 500) {
+          setTimelineHeight(newHeight);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      setIsResizingTimeline(false);
+      document.body.classList.remove('resizing');
+    };
+
+    if (isResizingSidebar || isResizingTimeline) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.classList.add('resizing');
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingSidebar, isResizingTimeline]);
 
   useEffect(() => {
     if (timelineRef.current) {
@@ -73,55 +167,62 @@ const App: React.FC = () => {
     return () => sortableRef.current?.destroy();
   }, [scenes.length]);
 
-  const checkConnection = useCallback(async () => {
-    try {
-      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-      setApiStatus(hasKey ? APIStatus.CONNECTED : APIStatus.IDLE);
-    } catch (e) {
-      setApiStatus(APIStatus.ERROR);
+  const handleTimelineWheel = (e: React.WheelEvent) => {
+    if (timelineRef.current) {
+      timelineRef.current.scrollLeft += e.deltaY;
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    checkConnection();
-  }, [checkConnection]);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleConnect = async () => {
-    setApiStatus(APIStatus.CONNECTING);
-    try {
-      await (window as any).aistudio.openSelectKey();
-      setApiStatus(APIStatus.CONNECTED);
-      setShowSettings(false);
-    } catch (e) {
-      setApiStatus(APIStatus.ERROR);
-    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      setScriptInput(content);
+    };
+    reader.readAsText(file);
   };
 
   const parseScript = () => {
     if (!scriptInput.trim()) return;
     
-    const rawScenes = scriptInput.split(/(?=Shot \d+|Phân cảnh \d+|Cảnh \d+|Phân đoạn \d+)/i)
-      .filter(s => s.trim().length > 0);
+    const rawScenes = scriptInput
+      .split(/(?=Shot\s*\d+|Phân cảnh\s*\d+|Cảnh\s*\d+|Phân đoạn\s*\d+)/i)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
     
     const newScenes: Scene[] = rawScenes.map((content, index) => {
-      const description = content.replace(/^(Shot|Phân cảnh|Cảnh|Phân đoạn)\s+\d+[:\-\s]*/i, '').trim();
+      // Tách tiêu đề shot
+      const lines = content.split('\n');
+      const titleLine = lines[0];
+      const rest = lines.slice(1).join('\n');
+      
+      // Tìm Prompt: nếu có
+      const promptMatch = rest.match(/Prompt:([\s\S]*)/i);
+      const visualPrompt = promptMatch ? promptMatch[1].trim() : rest.trim();
+      const description = titleLine.replace(/^(Shot|Phân cảnh|Cảnh|Phân đoạn)\s*\d+[:\-\s]*/i, '').trim();
+
       return {
         id: crypto.randomUUID(),
         shotNumber: index + 1,
-        description: description || 'Không có mô tả',
-        visualPrompt: description || 'Mô tả hình ảnh...',
+        description: description || 'Mô tả trống',
+        visualPrompt: visualPrompt || description || 'Mô tả hình ảnh...',
         isGenerating: false,
         duration: 5,
-        shotType: "Trung cảnh (Medium Shot)",
+        shotType: "Trung cảnh",
         style: "sketch",
         aspectRatio: "16:9"
       };
     });
 
-    setScenes(newScenes);
-    if (newScenes.length > 0) setSelectedSceneId(newScenes[0].id);
-    setScriptInput('');
-    setShowScriptInput(false);
+    if (newScenes.length > 0) {
+      setScenes(newScenes);
+      setSelectedSceneId(newScenes[0].id);
+      setScriptInput('');
+      setShowScriptInput(false);
+    }
   };
 
   const applyStyleToAll = () => {
@@ -134,11 +235,11 @@ const App: React.FC = () => {
     const newScene: Scene = {
       id: crypto.randomUUID(),
       shotNumber: 0,
-      description: 'Mô tả kịch bản mới...',
-      visualPrompt: 'Mô tả hình ảnh phác thảo...',
+      description: 'Mô tả mới...',
+      visualPrompt: 'Mô tả hình ảnh...',
       isGenerating: false,
       duration: 5,
-      shotType: "Trung cảnh (Medium Shot)",
+      shotType: "Trung cảnh",
       style: selectedScene?.style || "sketch",
       aspectRatio: "16:9"
     };
@@ -171,29 +272,28 @@ const App: React.FC = () => {
   };
 
   const generateSingle = async (id: string) => {
-    const scene = scenes.find(s => s.id === id);
-    if (!scene || apiStatus !== APIStatus.CONNECTED) {
-      if (apiStatus !== APIStatus.CONNECTED) setShowSettings(true);
+    if (apiStatus !== APIStatus.CONNECTED) {
+      alert("Vui lòng nhập API Key hợp lệ trên thanh menu!");
       return;
     }
 
+    const scene = scenes.find(s => s.id === id);
+    if (!scene) return;
+
     updateScene(id, { isGenerating: true, error: undefined });
     try {
-      const imageUrl = await generateStoryboardSketch(scene.visualPrompt || scene.description, scene.style);
+      const imageUrl = await generateStoryboardSketch(scene.visualPrompt || scene.description, scene.style, apiKey);
       updateScene(id, { imageUrl, isGenerating: false });
     } catch (error: any) {
-      const errMsg = error.message === "API_KEY_RESET_REQUIRED" ? "Cần reset API Key" : "Lỗi tạo ảnh";
-      updateScene(id, { isGenerating: false, error: errMsg });
-      if (error.message === "API_KEY_RESET_REQUIRED") {
-        setApiStatus(APIStatus.IDLE);
-        setShowSettings(true);
-      }
+      console.error(error);
+      updateScene(id, { isGenerating: false, error: "Lỗi API" });
+      alert("Lỗi khi tạo ảnh. Vui lòng kiểm tra lại API Key.");
     }
   };
 
   const generateAll = async () => {
     if (apiStatus !== APIStatus.CONNECTED) {
-      setShowSettings(true);
+      alert("Vui lòng nhập API Key!");
       return;
     }
     setIsGeneratingAll(true);
@@ -232,18 +332,9 @@ const App: React.FC = () => {
         const container = pdfItemRefs.current[scene.id];
         if (!container) continue;
 
-        const images = Array.from(container.getElementsByTagName('img')) as HTMLImageElement[];
-        await Promise.all(images.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise((resolve) => {
-            img.onload = resolve;
-            img.onerror = resolve;
-          });
-        }));
-
         const canvas = await html2canvas(container, {
           backgroundColor: '#ffffff',
-          scale: 2, // Tăng chất lượng ảnh
+          scale: 2,
           useCORS: true,
           logging: false
         });
@@ -253,10 +344,9 @@ const App: React.FC = () => {
         pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
       }
 
-      pdf.save(`Storyboard_${scenes.length}_Shots_${Date.now()}.pdf`);
+      pdf.save(`Storyboard_${scenes.length}_Shots.pdf`);
     } catch (err) {
-      console.error("PDF Export failed:", err);
-      alert("Xuất PDF thất bại. Vui lòng kiểm tra lại kết nối mạng.");
+      alert("Lỗi xuất PDF.");
     } finally {
       setIsExporting(false);
     }
@@ -265,43 +355,50 @@ const App: React.FC = () => {
   return (
     <div className="h-screen flex flex-col bg-[#0f0f0f] text-gray-200 overflow-hidden font-sans">
       {/* Header */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-[#222] bg-[#0f0f0f] z-50">
-        <div className="flex items-center gap-8">
+      <header className="h-16 flex-shrink-0 flex items-center justify-between px-6 border-b border-[#222] bg-[#0f0f0f] z-50">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <div className="bg-[#ff6b00] p-1.5 rounded-lg text-black font-bold shadow-[0_0_15px_rgba(255,107,0,0.3)]">
               <ImageIcon size={20} />
             </div>
-            <span className="text-xl font-black italic tracking-tighter text-white uppercase">AI SKETCH <span className="text-[#ff6b00]">PRO</span></span>
+            <span className="text-xl font-black italic tracking-tighter text-white uppercase hidden sm:inline">AI STORYBOARD <span className="text-[#ff6b00]">CREATOR</span></span>
           </div>
 
-          <button 
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-3 px-4 py-1.5 rounded-full border border-[#333] bg-[#1a1a1a] hover:bg-[#222] transition-colors group cursor-pointer"
-          >
-            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider group-hover:text-gray-300">API:</span>
-            <div className={`w-2 h-2 rounded-full ${apiStatus === APIStatus.CONNECTED ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-            <span className={`text-[10px] font-bold ${apiStatus === APIStatus.CONNECTED ? 'text-white' : 'text-red-500 underline'}`}>
-              {apiStatus === APIStatus.CONNECTED ? 'CONNECTED' : 'CHƯA KẾT NỐI'}
-            </span>
-          </button>
+          {/* API Key Input Section */}
+          <div className="flex items-center gap-3 bg-[#1a1a1a] border border-[#333] rounded-full pl-4 pr-2 py-1 transition-all focus-within:border-[#ff6b00] group">
+            <KeyIcon size={14} className={apiStatus === APIStatus.CONNECTED ? "text-green-500" : "text-gray-500"} />
+            <input 
+              type={showKey ? "text" : "password"}
+              placeholder="Nhập Gemini API Key..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="bg-transparent border-none outline-none text-[10px] font-bold text-white w-32 md:w-56 placeholder:text-gray-600"
+            />
+            <button onClick={() => setShowKey(!showKey)} className="p-1 hover:text-white transition-colors text-gray-500">
+              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <div className="flex items-center gap-2 ml-1 px-3 py-1 bg-black/40 rounded-full border border-white/5">
+              <div className={`w-1.5 h-1.5 rounded-full ${apiStatus === APIStatus.CONNECTED ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+              <span className={`text-[9px] font-black uppercase tracking-widest ${apiStatus === APIStatus.CONNECTED ? 'text-green-500' : 'text-red-500'}`}>
+                {apiStatus === APIStatus.CONNECTED ? 'CONNECTED' : 'IDLE'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button onClick={() => setShowGuide(true)} className="p-2 text-gray-500 hover:text-[#ff6b00] transition-colors">
             <HelpCircle size={20} />
           </button>
-          <button onClick={() => setShowSettings(true)} className="p-2 text-gray-500 hover:text-[#ff6b00] transition-colors">
-            <SettingsIcon size={20} />
-          </button>
           <div className="w-px h-6 bg-[#333] mx-2" />
-          <button onClick={() => setShowScriptInput(!showScriptInput)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a1a] text-xs font-bold hover:bg-[#222] transition-colors border border-[#333]">
+          <button onClick={() => setShowScriptInput(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1a1a1a] text-xs font-bold hover:bg-[#222] transition-colors border border-[#333]">
             <Play size={16} /> NHẬP KỊCH BẢN
           </button>
           {!isGeneratingAll ? (
             <button 
               onClick={generateAll}
-              disabled={apiStatus !== APIStatus.CONNECTED || scenes.length === 0}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#ff6b00] text-black font-bold text-xs hover:bg-[#e66000] disabled:opacity-50 transition-all shadow-[0_0_20px_rgba(255,107,0,0.2)]"
+              disabled={scenes.length === 0 || apiStatus !== APIStatus.CONNECTED}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#ff6b00] text-black font-bold text-xs hover:bg-[#e66000] disabled:opacity-50 transition-all"
             >
               <RefreshCw size={16} /> VẼ TẤT CẢ
             </button>
@@ -315,181 +412,85 @@ const App: React.FC = () => {
             <button 
               onClick={exportToPDF} 
               disabled={isExporting} 
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black font-bold text-xs hover:bg-gray-200 transition-all animate-in fade-in slide-in-from-right-2"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black font-bold text-xs hover:bg-gray-200 transition-all"
             >
               {isExporting ? <RefreshCw size={16} className="animate-spin" /> : <Download size={16} />}
-              {isExporting ? 'XUẤT...' : 'XUẤT PDF'}
+              {isExporting ? 'ĐANG XUẤT...' : 'XUẤT PDF'}
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Workspace */}
+      {/* Main Workspace Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* API Settings Modal */}
-        {showSettings && (
-          <div className="absolute inset-0 z-[100] bg-black/95 flex items-center justify-center p-10 backdrop-blur-xl">
-            <div className="bg-[#1a1a1a] w-full max-w-md rounded-3xl border border-[#333] p-8 shadow-3xl space-y-8">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">Cấu hình API</h2>
-                <p className="text-gray-500 text-sm">Vui lòng chọn hoặc thay đổi API Key để tiếp tục sử dụng dịch vụ phác thảo.</p>
-              </div>
-              
-              <div className="p-6 bg-black/40 rounded-2xl border border-white/5 space-y-4">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
-                  <span>Trạng thái kết nối</span>
-                  <div className={`px-3 py-1 rounded-full ${apiStatus === APIStatus.CONNECTED ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                    {apiStatus}
-                  </div>
-                </div>
-                <button 
-                  onClick={handleConnect} 
-                  className="w-full py-5 bg-[#ff6b00] text-black font-black uppercase tracking-[0.2em] rounded-xl hover:bg-[#e66000] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,107,0,0.2)]"
-                >
-                  <RefreshCw size={20} />
-                  THAY ĐỔI MÃ API KHÁC
-                </button>
-              </div>
-
-              <div className="space-y-4 text-center">
-                <a 
-                  href="https://ai.google.dev/gemini-api/docs/billing" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs text-gray-500 hover:text-[#ff6b00] transition-colors"
-                >
-                  <Info size={14} /> Tìm hiểu về biểu phí và API Key <ExternalLink size={12} />
-                </a>
-                <button 
-                  onClick={() => setShowSettings(false)} 
-                  className="w-full py-3 text-gray-500 font-bold hover:text-white transition-colors uppercase text-[10px] tracking-widest"
-                >
-                  Bỏ qua & Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Guide Modal */}
-        {showGuide && (
-          <div className="absolute inset-0 z-[100] bg-black/95 flex items-center justify-center p-10 backdrop-blur-xl">
-            <div className="bg-[#1a1a1a] w-full max-w-2xl rounded-3xl border border-[#333] p-10 shadow-3xl space-y-8 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter flex items-center gap-4">
-                  <BookOpen className="text-[#ff6b00]" /> HƯỚNG DẪN SỬ DỤNG
-                </h2>
-                <button onClick={() => setShowGuide(false)} className="p-2 hover:text-white transition-colors"><XCircle size={32} /></button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <h3 className="font-black text-[#ff6b00] uppercase tracking-widest flex items-center gap-2">
-                      <span className="bg-[#ff6b00] text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px]">1</span> 
-                      Nhập kịch bản
-                    </h3>
-                    <p className="text-gray-400 leading-relaxed">Nhấn <b>"NHẬP KỊCH BẢN"</b> và dán nội dung. Mỗi phân cảnh nên bắt đầu bằng "Shot X:" hoặc "Phân cảnh X:".</p>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-black text-[#ff6b00] uppercase tracking-widest flex items-center gap-2">
-                      <span className="bg-[#ff6b00] text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px]">2</span> 
-                      Chọn phong cách
-                    </h3>
-                    <p className="text-gray-400 leading-relaxed">Chọn Sketch, Colored Pencil, 2D... Bạn có thể <b>áp dụng cho tất cả</b> các shot nhanh chóng.</p>
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <h3 className="font-black text-[#ff6b00] uppercase tracking-widest flex items-center gap-2">
-                      <span className="bg-[#ff6b00] text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px]">3</span> 
-                      Tạo hình ảnh
-                    </h3>
-                    <p className="text-gray-400 leading-relaxed">Nhấn <b>"VẼ LẠI"</b> hoặc <b>"VẼ TẤT CẢ"</b>. Hệ thống sẽ xử lý từng shot theo timeline.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="font-black text-[#ff6b00] uppercase tracking-widest flex items-center gap-2">
-                      <span className="bg-[#ff6b00] text-black w-6 h-6 rounded-full flex items-center justify-center text-[10px]">4</span> 
-                      Xuất PDF
-                    </h3>
-                    <p className="text-gray-400 leading-relaxed">Khi hoàn tất, nút <b>"XUẤT PDF"</b> hiện lên. Mỗi phân cảnh sẽ nằm trên 1 trang PDF ngang riêng biệt.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/5 p-6 rounded-2xl border border-white/5 flex items-start gap-4">
-                <AlertCircle className="text-[#ff6b00] shrink-0" size={24} />
-                <p className="text-xs text-gray-500 leading-relaxed italic">
-                  Ghi chú: Ảnh xuất PDF sẽ giữ nguyên tỷ lệ khung hình (16:9), không bị dẹt hay méo.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Center Preview */}
+        {/* Workspace Central Column */}
         <div className="flex-1 flex flex-col p-6 bg-[#0a0a0a] overflow-hidden">
           <div className="flex-1 bg-[#111] rounded-3xl border border-[#222] relative flex items-center justify-center overflow-hidden">
             {selectedScene ? (
-              <div className="w-full h-full p-4 relative">
-                <div className="w-full h-full rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/5 shadow-2xl">
+              <div className="w-full h-full p-8 flex items-center justify-center">
+                <div className="w-full max-w-[1200px] aspect-video rounded-3xl overflow-hidden bg-black border border-white/5 relative shadow-2xl">
                   {selectedScene.imageUrl ? (
-                    <img src={selectedScene.imageUrl} className="w-full h-full object-contain" alt="Shot" />
+                    <img src={selectedScene.imageUrl} className="w-full h-full object-contain" alt="Preview" />
                   ) : (
-                    <div className="flex flex-col items-center gap-6 text-gray-800">
-                      <ImageIcon size={96} strokeWidth={0.5} />
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-800">
+                      <ImageIcon size={120} strokeWidth={0.5} />
+                      <p className="mt-4 text-xs font-black uppercase tracking-widest opacity-20">No Image Generated</p>
                     </div>
                   )}
                   {selectedScene.isGenerating && (
-                    <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-10">
-                      <div className="w-14 h-14 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin mb-6" />
-                      <p className="text-[#ff6b00] font-black uppercase text-[10px] tracking-[0.4em] animate-pulse">Đang phác thảo {selectedScene.style}...</p>
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10">
+                      <RefreshCw size={48} className="text-[#ff6b00] animate-spin mb-4" />
+                      <p className="text-[#ff6b00] font-black uppercase text-[10px] tracking-[0.4em] animate-pulse">Rendering {selectedScene.style}...</p>
                     </div>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-4 text-gray-700">
-                <LayoutGrid size={48} />
-                <p className="text-sm italic opacity-50 uppercase tracking-widest">Chọn Shot từ Timeline</p>
+              <div className="flex flex-col items-center gap-4 text-gray-800">
+                <LayoutGrid size={64} />
+                <p className="text-sm font-black italic uppercase tracking-widest opacity-30">Chọn shot từ Timeline</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right Sidebar - Properties */}
-        <aside className="w-[400px] border-l border-[#222] bg-[#0f0f0f] flex flex-col p-8 overflow-y-auto no-print scrollbar-hide">
+        {/* Horizontal Resizer Line (Vertical Handle) for Sidebar */}
+        <div 
+          className={`resizer-h ${isResizingSidebar ? 'active' : ''}`}
+          onMouseDown={() => setIsResizingSidebar(true)}
+        >
+          <div className="h-full flex items-center justify-center">
+            <GripVertical size={12} className="text-black/50" />
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <aside 
+          className="border-l border-[#222] bg-[#0f0f0f] flex flex-col p-8 overflow-y-auto no-print scrollbar-hide"
+          style={{ width: sidebarWidth }}
+        >
           {selectedScene ? (
             <div className="space-y-8">
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className="bg-[#ff6b00] text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">PHÂN CẢNH {selectedScene.shotNumber}</span>
-                  <h2 className="text-4xl font-black text-white mt-3 italic tracking-tighter">SHOT {selectedScene.shotNumber}</h2>
-                </div>
-                <button onClick={(e) => deleteScene(selectedScene.id, e)} className="p-2 bg-red-600/10 text-red-500 rounded-lg hover:bg-red-600 hover:text-white transition-all"><Trash2 size={18} /></button>
+              <div>
+                <span className="bg-[#ff6b00] text-black text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest">PHÂN CẢNH {selectedScene.shotNumber}</span>
+                <h2 className="text-4xl font-black text-white mt-3 italic tracking-tighter">SHOT {selectedScene.shotNumber}</h2>
               </div>
 
-              {/* Style Selector */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] flex items-center gap-2">
                     <Palette size={12} /> Phong cách (Style)
                   </label>
-                  <button 
-                    onClick={applyStyleToAll}
-                    className="text-[9px] font-black text-[#ff6b00] hover:underline uppercase tracking-widest"
-                  >
-                    Áp dụng cho tất cả
-                  </button>
+                  <button onClick={applyStyleToAll} className="text-[9px] font-black text-[#ff6b00] hover:underline uppercase tracking-widest">Áp dụng cho tất cả</button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'sketch', label: 'Bút chì (Mono)' },
+                    { id: 'sketch', label: 'Bút chì' },
                     { id: 'colored-pencil', label: 'Bút chì màu' },
                     { id: '2d-animation', label: 'Hoạt hình 2D' },
                     { id: '3d-render', label: 'Dựng hình 3D' },
                     { id: 'realistic', label: 'Tả thực' },
-                    { id: 'noir', label: 'Đen trắng Noir' }
+                    { id: 'noir', label: 'Film Noir' }
                   ].map(s => (
                     <button 
                       key={s.id}
@@ -504,9 +505,18 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">Kịch bản / Mô tả</label>
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">Câu lệnh vẽ (Prompt)</label>
                 <textarea 
-                  className="w-full h-40 bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 text-xs leading-relaxed font-semibold focus:border-[#ff6b00] outline-none resize-none transition-all"
+                  className="w-full h-44 bg-[#1a1a1a] border border-[#333] rounded-2xl p-6 text-xs leading-relaxed font-semibold focus:border-[#ff6b00] outline-none resize-none transition-all"
+                  value={selectedScene.visualPrompt}
+                  onChange={(e) => updateScene(selectedScene.id, { visualPrompt: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">Mô tả phân cảnh</label>
+                <input 
+                  className="w-full bg-[#1a1a1a] border border-[#333] rounded-xl p-4 text-xs font-semibold focus:border-[#ff6b00] outline-none transition-all"
                   value={selectedScene.description}
                   onChange={(e) => updateScene(selectedScene.id, { description: e.target.value })}
                 />
@@ -518,138 +528,180 @@ const App: React.FC = () => {
                 className="w-full py-5 bg-white text-black font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-200 transition-all flex items-center justify-center gap-4 shadow-2xl disabled:opacity-50"
               >
                 {selectedScene.isGenerating ? <RefreshCw size={18} className="animate-spin" /> : <RefreshCw size={18} />}
-                {selectedScene.isGenerating ? 'ĐANG VẼ...' : (selectedScene.imageUrl ? 'VẼ LẠI PHÂN CẢNH' : 'BẮT ĐẦU VẼ')}
+                {selectedScene.isGenerating ? 'ĐANG VẼ...' : 'VẼ LẠI PHÂN CẢNH'}
               </button>
+              {apiStatus !== APIStatus.CONNECTED && (
+                <p className="text-[9px] text-red-500 font-bold uppercase tracking-widest text-center italic">Vui lòng nhập API Key để bắt đầu vẽ</p>
+              )}
             </div>
           ) : (
-             <div className="h-full flex flex-col items-center justify-center text-gray-600 opacity-50 space-y-4">
-               <Palette size={48} />
-               <p className="text-sm font-bold uppercase tracking-widest text-center">Chọn Shot để cấu hình</p>
-             </div>
+            <div className="h-full flex flex-col items-center justify-center text-gray-800 opacity-50 space-y-4">
+              <Palette size={48} />
+              <p className="text-xs font-black uppercase tracking-widest text-center px-10">Chọn một phân cảnh để tinh chỉnh</p>
+            </div>
           )}
         </aside>
       </div>
 
-      {/* Bottom Timeline */}
-      <div className="h-72 border-t border-[#222] bg-[#0a0a0a] flex flex-col no-print">
-        <div ref={timelineRef} className="flex-1 overflow-x-auto p-6 flex items-start gap-4 custom-scrollbar">
-          {scenes.map((scene) => (
-            <div 
-              key={scene.id}
-              onClick={() => setSelectedSceneId(scene.id)}
-              className={`flex-shrink-0 h-full w-[300px] rounded-2xl border-2 transition-all cursor-pointer overflow-hidden group relative flex flex-col ${selectedSceneId === scene.id ? 'border-[#ff6b00] bg-[#1a1a1a]' : 'border-[#222] bg-[#111] hover:border-[#444]'}`}
-            >
-              <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => { e.stopPropagation(); addScene(scene.id); }} className="bg-[#ff6b00] text-black p-2 rounded-xl"><Plus size={14} /></button>
-                <button onClick={(e) => { e.stopPropagation(); deleteScene(scene.id, e); }} className="bg-red-600 text-white p-2 rounded-xl"><Trash2 size={14} /></button>
-              </div>
-              <div className="h-[140px] bg-[#000] flex items-center justify-center relative border-b border-[#222]">
-                {scene.imageUrl ? (
-                  <img src={scene.imageUrl} className="w-full h-full object-cover" alt="Shot" />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-gray-800">
-                    {scene.isGenerating ? <RefreshCw size={24} className="animate-spin text-[#ff6b00]" /> : <ImageIcon size={36} />}
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/80 rounded text-[7px] font-black text-[#ff6b00] uppercase tracking-widest">{scene.style}</div>
-              </div>
-              <div className="flex-1 p-4 bg-gradient-to-t from-black/20 to-transparent">
-                <span className="text-[11px] font-black text-[#ff6b00] italic">SHOT {scene.shotNumber}</span>
-                <p className="text-[10px] text-gray-400 mt-1 line-clamp-2 italic font-medium leading-relaxed">{scene.description}</p>
-              </div>
-            </div>
-          ))}
-          <button 
-            onClick={() => addScene()} 
-            className="flex-shrink-0 h-full w-20 rounded-2xl border-2 border-dashed border-[#333] flex flex-col items-center justify-center gap-2 text-gray-600 hover:text-[#ff6b00] hover:border-[#ff6b00] transition-all group"
-          >
-            <Plus size={32} className="group-hover:scale-110 transition-transform" />
-          </button>
+      {/* Vertical Resizer Handle for Timeline */}
+      <div 
+        className={`resizer-v ${isResizingTimeline ? 'active' : ''}`}
+        onMouseDown={() => setIsResizingTimeline(true)}
+      >
+        <div className="w-full flex items-center justify-center">
+          <GripHorizontal size={12} className="text-black/50" />
         </div>
       </div>
 
-      {/* Script Import Modal */}
+      {/* Timeline Section with Film Reel Styling */}
+      <div 
+        className="flex-shrink-0 film-reel-container flex flex-col no-print"
+        style={{ height: timelineHeight }}
+      >
+        <div className="film-perforations perforations-top"></div>
+        <div className="film-perforations perforations-bottom"></div>
+        
+        <div className="flex-1 film-content-mask overflow-hidden flex flex-col p-4">
+          <div 
+            ref={timelineRef} 
+            onWheel={handleTimelineWheel}
+            className="flex-1 overflow-x-auto p-4 flex items-start gap-5 custom-scrollbar"
+          >
+            {scenes.map((scene) => (
+              <div 
+                key={scene.id}
+                onClick={() => setSelectedSceneId(scene.id)}
+                className={`flex-shrink-0 h-full w-[300px] rounded-xl border-2 transition-all cursor-pointer overflow-hidden group relative flex flex-col ${selectedSceneId === scene.id ? 'border-[#ff6b00] bg-[#1a1a1a] scale-105 z-20' : 'border-[#333] bg-black hover:border-[#555]'}`}
+              >
+                <div className="absolute top-2 right-2 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => { e.stopPropagation(); addScene(scene.id); }} className="bg-[#ff6b00] text-black p-1.5 rounded-lg hover:scale-110 transition-transform"><Plus size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); deleteScene(scene.id, e); }} className="bg-red-600 text-white p-1.5 rounded-lg hover:scale-110 transition-transform"><Trash2 size={14} /></button>
+                </div>
+                <div className="h-[120px] bg-black flex items-center justify-center relative border-b border-[#222]">
+                  {scene.imageUrl ? (
+                    <img src={scene.imageUrl} className="w-full h-full object-cover" alt="Thumb" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-800">
+                      {scene.isGenerating ? <RefreshCw size={24} className="animate-spin text-[#ff6b00]" /> : <ImageIcon size={32} />}
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/80 rounded text-[7px] font-black text-[#ff6b00] uppercase tracking-widest">{scene.style}</div>
+                </div>
+                <div className="flex-1 p-3 bg-gradient-to-t from-black/20 to-transparent">
+                  <span className="text-[10px] font-black text-[#ff6b00] italic uppercase">SHOT {scene.shotNumber}</span>
+                  <p className="text-[9px] text-gray-400 mt-1 line-clamp-2 italic leading-tight">{scene.description}</p>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => addScene()} className="flex-shrink-0 h-full w-24 rounded-xl border-2 border-dashed border-[#444] flex items-center justify-center text-gray-700 hover:text-[#ff6b00] hover:border-[#ff6b00] transition-all bg-black/40"><Plus size={32} /></button>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals and Overlays */}
       {showScriptInput && (
-        <div className="fixed inset-0 z-[250] bg-black/90 flex items-center justify-center p-6 backdrop-blur-md">
-          <div className="bg-[#111] max-w-3xl w-full rounded-3xl border border-[#333] p-10 space-y-8 shadow-3xl">
+        <div className="fixed inset-0 z-[250] bg-black/95 flex items-center justify-center p-6 backdrop-blur-md">
+          <div className="bg-[#111] max-w-4xl w-full rounded-3xl border border-[#333] p-10 space-y-8 shadow-3xl">
             <div className="flex justify-between items-center">
-              <div className="space-y-1">
+              <div>
                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Nhập Kịch Bản</h3>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Tự động phân tách Shot 1, Shot 2...</p>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1">Sử dụng tệp tin hoặc dán trực tiếp kịch bản</p>
               </div>
               <button onClick={() => setShowScriptInput(false)} className="p-2 hover:text-[#ff6b00] transition-colors"><XCircle size={32} /></button>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setScriptInput(DEMO_SCRIPT)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-xl text-[#ff6b00] text-[10px] font-black uppercase tracking-widest hover:bg-[#ff6b00]/20 transition-all"
+              >
+                <FileText size={14} /> Dùng kịch bản mẫu
+              </button>
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-gray-400 text-[10px] font-black uppercase tracking-widest hover:text-white hover:border-white/20 transition-all"
+              >
+                <Upload size={14} /> Tải tệp lên (.txt)
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                accept=".txt" 
+                className="hidden" 
+              />
             </div>
             
             <textarea
               value={scriptInput}
               onChange={(e) => setScriptInput(e.target.value)}
-              className="w-full h-80 bg-black border border-[#333] rounded-2xl p-8 font-mono text-sm outline-none focus:border-[#ff6b00] transition-all leading-relaxed shadow-inner"
-              placeholder="Shot 1: Mô tả... Shot 2: Mô tả..."
+              className="w-full h-[350px] bg-black border border-[#333] rounded-2xl p-8 font-mono text-sm outline-none focus:border-[#ff6b00] transition-all leading-relaxed custom-scrollbar"
+              placeholder="Nhập kịch bản tại đây... (Ví dụ: Shot 1: Cảnh toàn rộng... Prompt: Robot đứng giữa thành phố...)"
             />
             
-            <button
-              onClick={parseScript}
-              className="w-full bg-[#ff6b00] py-5 rounded-2xl font-black uppercase tracking-[0.3em] hover:bg-[#e66000] transition-all shadow-lg"
-            >
-              TẠO TIMELINE
-            </button>
+            <button onClick={parseScript} className="w-full bg-[#ff6b00] py-5 rounded-2xl font-black uppercase tracking-[0.3em] hover:bg-[#e66000] transition-all shadow-lg">Bắt đầu tạo Storyboard</button>
           </div>
         </div>
       )}
 
-      {/* HIDDEN PDF TEMPLATE - GIỮ TỈ LỆ KHUNG HÌNH VÀ MỖI SHOT 1 TRANG */}
+      {/* Guide Modal */}
+      {showGuide && (
+        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-10 backdrop-blur-xl">
+          <div className="bg-[#1a1a1a] w-full max-w-2xl rounded-3xl border border-[#333] p-10 space-y-8 overflow-y-auto max-h-[90vh] custom-scrollbar">
+            <div className="flex justify-between items-center">
+              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter flex items-center gap-4">
+                <BookOpen className="text-[#ff6b00]" /> HƯỚNG DẪN
+              </h2>
+              <button onClick={() => setShowGuide(false)} className="p-2 hover:text-white transition-colors"><XCircle size={32} /></button>
+            </div>
+            <div className="space-y-6 text-sm text-gray-400 leading-relaxed">
+              <p>1. <b>API Key:</b> Nhập Gemini API Key của bạn vào ô trên thanh menu.</p>
+              <p>2. <b>Nhập kịch bản:</b> Nhấn "NHẬP KỊCH BẢN". Bạn có thể dán nội dung, tải tệp .txt hoặc dùng kịch bản mẫu đã chuẩn bị sẵn.</p>
+              <p>3. <b>Phân tích kịch bản:</b> Hệ thống sẽ tách các đoạn dựa trên từ khóa như "Shot 1", "Phân cảnh 1". Nếu có từ khóa "Prompt:", phần đó sẽ được dùng làm câu lệnh vẽ ảnh cho AI.</p>
+              <p>4. <b>Vẽ Storyboard:</b> Chọn phong cách vẽ và nhấn vẽ. AI sẽ tạo hình ảnh phác thảo mượt mà theo đúng mô tả.</p>
+              <p>5. <b>Tải về:</b> Sau khi vẽ xong toàn bộ, nhấn "XUẤT PDF" để nhận file storyboard hoàn chỉnh chuyên nghiệp.</p>
+            </div>
+            <button onClick={() => setShowGuide(false)} className="w-full py-4 bg-[#ff6b00] text-black font-black uppercase rounded-xl">Bắt đầu ngay</button>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Generation Template (Hidden) */}
       <div style={{ position: 'fixed', left: '-20000px', top: 0 }}>
         {scenes.map((s) => (
           <div key={s.id} ref={el => pdfItemRefs.current[s.id] = el} className="w-[1123px] h-[794px] bg-white text-black p-20 flex flex-col box-border">
-            <div className="flex justify-between items-end border-b-8 border-black pb-8 mb-12 shrink-0">
+            <div className="flex justify-between items-end border-b-[8px] border-black pb-8 mb-12">
               <div className="flex items-center gap-8">
                 <div className="bg-black text-white px-10 py-4 text-4xl font-black italic">SHOT {s.shotNumber}</div>
-                <h1 className="text-4xl font-black uppercase opacity-20 tracking-tighter">AI Storyboard Production</h1>
+                <h1 className="text-4xl font-black uppercase opacity-10 tracking-tighter">AI STORYBOARD CREATOR</h1>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Style Mode</p>
-                <p className="text-lg font-black">{s.style.toUpperCase()}</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Style</p>
+                <p className="text-xl font-black">{s.style.toUpperCase()}</p>
               </div>
             </div>
-
             <div className="flex-1 flex gap-12 overflow-hidden items-stretch">
-              {/* IMAGE CONTAINER CỐ ĐỊNH TỈ LỆ 16:9 ĐỂ KHÔNG BỊ DẸT */}
               <div className="w-[65%] flex items-center justify-center">
-                <div className="w-full relative bg-gray-50 border-[10px] border-black rounded-[40px] overflow-hidden shadow-xl" style={{ aspectRatio: '16/9' }}>
-                  {s.imageUrl ? (
-                    <img src={s.imageUrl} className="w-full h-full object-contain" crossOrigin="anonymous" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-200">
-                      <ImageIcon size={150} />
-                    </div>
-                  )}
+                <div className="w-full relative bg-gray-50 border-[12px] border-black rounded-[40px] overflow-hidden shadow-2xl" style={{ aspectRatio: '16/9' }}>
+                  {s.imageUrl ? <img src={s.imageUrl} className="w-full h-full object-contain" crossOrigin="anonymous" /> : null}
                 </div>
               </div>
-
-              {/* DESCRIPTION SECTION */}
               <div className="w-[35%] flex flex-col gap-8">
                 <div className="flex-1 flex flex-col gap-4">
-                  <h3 className="text-xs font-black uppercase bg-black text-white px-4 py-1 self-start">Mô tả phân cảnh</h3>
-                  <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-dashed border-gray-200 text-xl font-bold italic leading-relaxed flex-1 overflow-hidden">
-                    {s.description}
+                  <h3 className="text-xs font-black uppercase bg-black text-white px-4 py-1 self-start tracking-widest">Description</h3>
+                  <div className="bg-gray-50 p-10 rounded-[40px] border-2 border-dashed border-gray-200 text-lg font-bold italic leading-normal flex-1 overflow-y-auto">
+                    {s.visualPrompt || s.description}
                   </div>
                 </div>
-                <div className="pt-6 border-t border-gray-100 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  <p>AI Storyboard Sketcher Pro</p>
-                  <p>Trang {s.shotNumber}</p>
+                <div className="pt-8 border-t-2 border-gray-100 flex justify-between items-center text-[10px] font-black text-gray-300 uppercase tracking-widest">
+                  <p>AI Generation • Professional Storyboard</p>
+                  <p>Page {s.shotNumber}</p>
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #222; border-radius: 20px; border: 2px solid #0a0a0a; }
-        * { -webkit-font-smoothing: antialiased; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-      `}</style>
     </div>
   );
 };

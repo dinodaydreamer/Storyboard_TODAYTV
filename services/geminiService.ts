@@ -3,10 +3,15 @@ import { GoogleGenAI } from "@google/genai";
 import { StoryboardStyle } from "../types";
 
 /**
- * Generates a storyboard sketch based on a scene description and chosen style.
+ * Generates a storyboard sketch based on a scene description, style and user-provided API Key.
  */
-export const generateStoryboardSketch = async (description: string, style: StoryboardStyle = 'sketch'): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+export const generateStoryboardSketch = async (
+  description: string, 
+  style: StoryboardStyle = 'sketch',
+  userApiKey: string
+): Promise<string> => {
+  // Khởi tạo instance mới ngay trước khi gọi để đảm bảo dùng Key mới nhất
+  const ai = new GoogleGenAI({ apiKey: userApiKey });
   
   let styleInstruction = "";
   
@@ -60,9 +65,6 @@ export const generateStoryboardSketch = async (description: string, style: Story
     }
     throw new Error("No image data found in response");
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
-      throw new Error("API_KEY_RESET_REQUIRED");
-    }
     throw error;
   }
 };
