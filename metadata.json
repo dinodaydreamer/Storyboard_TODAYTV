@@ -1,6 +1,5 @@
-
 {
-  "name": "AI STORYBOARD CREATOR",
-  "description": "An advanced storyboard creation tool that turns scripts into visual sketches using Gemini 3 Pro Image and allows editing with Gemini 2.5 Flash Image.",
+  "name": "AI Storyboard Creator",
+  "description": "Create professional storyboards from scripts using AI with character consistency.",
   "requestFramePermissions": []
 }
