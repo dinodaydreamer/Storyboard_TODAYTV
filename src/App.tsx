@@ -21,6 +21,8 @@ import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 import jsPDF from 'jspdf';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { cn } from './lib/utils';
 import { Shot, STORYBOARD_STYLES } from './types';
 
@@ -32,6 +34,7 @@ const Header = ({
   onOpenScript, 
   onGenerateAll, 
   onExportPDF,
+  onDownloadAll,
   isExporting
 }: { 
   apiKey: string; 
@@ -39,6 +42,7 @@ const Header = ({
   onOpenScript: () => void;
   onGenerateAll: () => void;
   onExportPDF: () => void;
+  onDownloadAll: () => void;
   isExporting: boolean;
 }) => {
   const [showKey, setShowKey] = useState(false);
@@ -93,11 +97,18 @@ const Header = ({
             Vẽ tất cả
           </button>
           <button 
+            onClick={onDownloadAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Tải tất cả ảnh (ZIP)
+          </button>
+          <button 
             onClick={onExportPDF}
             disabled={isExporting}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black hover:bg-white/90 text-sm font-bold transition-colors disabled:opacity-50"
           >
-            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
             Xuất PDF
           </button>
         </div>
@@ -388,6 +399,37 @@ export default function App() {
     }
   };
 
+  const downloadImage = (shot: Shot) => {
+    if (!shot.image) return;
+    const link = document.createElement('a');
+    link.href = shot.image;
+    link.download = `Shot_${shot.number}_${new Date().getTime()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadAllImages = async () => {
+    const shotsWithImages = shots.filter(s => s.image);
+    if (shotsWithImages.length === 0) {
+      alert("Chưa có phân cảnh nào được vẽ.");
+      return;
+    }
+
+    const zip = new JSZip();
+    const folder = zip.folder("storyboard_images");
+
+    shotsWithImages.forEach((shot) => {
+      if (shot.image) {
+        const base64Data = shot.image.split(',')[1];
+        folder?.file(`Shot_${shot.number}.png`, base64Data, { base64: true });
+      }
+    });
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `Storyboard_Images_${new Date().getTime()}.zip`);
+  };
+
   const exportPDF = async () => {
     if (isExporting) return;
     setIsExporting(true);
@@ -490,6 +532,7 @@ export default function App() {
         onOpenScript={() => setIsScriptModalOpen(true)}
         onGenerateAll={generateAll}
         onExportPDF={exportPDF}
+        onDownloadAll={downloadAllImages}
         isExporting={isExporting}
       />
 
@@ -534,14 +577,25 @@ export default function App() {
                     <span className="bg-brand text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Shot {selectedShot?.number}</span>
                     <span className="text-white/60 text-xs truncate max-w-md">{selectedShot?.prompt}</span>
                   </div>
-                  <button 
-                    onClick={() => selectedShot && generateImage(selectedShot)}
-                    disabled={selectedShot?.status === 'generating'}
-                    className="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <RefreshCcw className={cn("w-3 h-3", selectedShot?.status === 'generating' && "animate-spin")} />
-                    Vẽ lại
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {selectedShot?.image && (
+                      <button 
+                        onClick={() => downloadImage(selectedShot)}
+                        className="bg-white/10 backdrop-blur-md text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-white/20 transition-all flex items-center gap-2"
+                      >
+                        <Download className="w-3 h-3" />
+                        Tải ảnh
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => selectedShot && generateImage(selectedShot)}
+                      disabled={selectedShot?.status === 'generating'}
+                      className="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold hover:bg-brand hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <RefreshCcw className={cn("w-3 h-3", selectedShot?.status === 'generating' && "animate-spin")} />
+                      Vẽ lại
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
